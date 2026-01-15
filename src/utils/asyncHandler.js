@@ -17,11 +17,13 @@
 // method 2 using promises
 
 const asyncHandler = (requestHandler) => {
-    Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err));
+    return (req , res , next)=>{
+        Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err));
+    }
 };
 
 
 
 
 
-export { asyncHandler };
+export { asyncHandler }
