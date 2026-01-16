@@ -1,9 +1,10 @@
-import mongoose from "mongoose"
+import mongoose, { Schema } from "mongoose";
+import bcrypt from "bcrypt"
 
 const userSchema = new mongoose.Schema(
     {
-        username : {
-            type : string , 
+        userName : {
+            type : String , 
             required : true , 
             unique : true ,
             lowercase : true , 
@@ -11,24 +12,24 @@ const userSchema = new mongoose.Schema(
             index : true  
         }, 
         email : {
-            type : string , 
+            type : String , 
             required : true , 
             unique : true ,
             lowercase : true , 
             trim : true 
         },
         fullName : {
-            type : string , 
+            type : String , 
             required : true , 
             lowercase : true , 
             trim : true 
         },
         avatar : {
-            type : string , //cloudinary url 
+            type : String , //cloudinary url 
             required : true 
         }, 
-        avatar : {
-            type : string  //cloudinary url
+        coverImage : {
+            type : String , //cloudinary url
         }, 
         watchHistory : [
             {
@@ -37,19 +38,25 @@ const userSchema = new mongoose.Schema(
             }
         ],
         password : {
-            type : string ,
+            type : String ,
             required : [
-                true, 'passoword is required'
+                true, 'password is required'
             ]
         },
         refreshToken : {
-            type : string 
+            type : String 
         }
     },{
         timestamps : true 
     }
 )
+userSchema.pre("save" , async function (next) {
+    if(!this.isModified("password")) return next;
+    this.password = await bcrypt.hash(this.password , 10)
+    next
+})
+userSchema.methods.isPasswordCorrect = async function(password){
+    return await bcrypt.compare(password, this.password)
+}
 
-
-
-export const user = mongoose.model("User" , userSchema)
+export const User = mongoose.model("User" , userSchema)

@@ -11,12 +11,16 @@ const uploadfile = async (localfilepath)=>{
     try {
         if(!localfilepath) return null ; 
         const response = await cloudinary.uploader.upload(localfilepath , {
-            resource_type : "auto "
+            resource_type : "auto"
         })
-        console.log("file uploaded on cloundinary " , response.url);
+        fs.unlinkSync(localfilepath)
+        // console.log("file uploaded on cloudinary " , response.url);
         return response;
     } catch (error) {
+        console.log("cloudinary error " , error);
         fs.unlinkSync(localfilepath) //remove the locally saved temporary file as the upload  operation got failed 
         return null ;
     }
 }
+
+export {uploadfile}
