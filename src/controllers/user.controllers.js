@@ -5,6 +5,7 @@ import { uploadfile } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { response } from "express";
 import jwt from "jsonwebtoken"
+import deleteCloudinaryAsset from "../utils/deletefile.js"
 
 const generateTokens = async (userId) => {
     try {
@@ -265,6 +266,13 @@ const changePassword = asyncHandler(async (req , res) => {
     ))
 })
 
+const getCurrentUser = asyncHandler(async (req, res) => {
+    return res
+    .status(200)
+    .json(new ApiResponse(
+        200 , req.user , "User fetched successfully"
+    ))
+})
 const updateAccountDetails = asyncHandler(async (req , res) => {
     const {fullName , email } = req.body ; 
     if(!fullName || !email){
@@ -316,6 +324,43 @@ const updateAvatar = asyncHandler(async (req, res) => {
     )
 })
 
+const deleteAndUpdataAvatar = asyncHandler(async (req , res) => {
+    //validate request 
+    //fetch user 
+    //validate if we get user or not 
+    //fetch old avatar public id 
+    //update new avatar - uplaod file on cloudinary and then save to db
+    //call deletefile utility to delete old avatar 
+
+    const newAvatarPath = req.file?.path
+    if(!newAvatarPath){
+        throw new ApiError(400  , "We need new avatar to update old avatar")
+    }
+    const user = await User.findById(req.user._id)
+    if(!user){
+        throw new ApiError(401 , "Unable to fetch User")
+    }
+    const oldAvatar = user.avatar?.public_id
+    const newAvatar =  await uploadfile(newAvatarPath)
+    if(!newAvatar){
+        throw new ApiError(400 , "uploading avatar on cloudinary failed ")
+    }
+    user.avatar = newAvatar ,
+    await user.save({validateBeforeSave : false})
+    
+    await deleteCloudinaryAsset(oldAvatar)
+    if(oldAvatar){
+        throw new ApiError(400 , "old avatar is not yet deleted")
+    }
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200 , user , "avatar updated successfully ")
+    )
+
+
+    
+})
 const updatecoverImage = asyncHandler(async (req , res) => {
     const coverImageLocalPath = req.file?.path 
     if(!coverImageLocalPath){
@@ -350,5 +395,6 @@ export {
     changePassword, 
     updateAccountDetails, 
     updateAvatar, 
+    deleteAndUpdataAvatar, 
     updatecoverImage
 };
