@@ -1,11 +1,12 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
+import { Subscription } from "../models/subscription.js";
 import { uploadfile } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { response } from "express";
 import jwt from "jsonwebtoken"
-import deleteCloudinaryAsset from "../utils/deletefile.js"
+import {deleteCloudinaryAsset} from "../utils/deletefile.js"
 
 const generateTokens = async (userId) => {
     try {
@@ -22,7 +23,6 @@ x
         throw new ApiError(500 , "Unable to generate tokens ")
     }
 }
-
 
 const registerUser = asyncHandler(async (req, res) => {
     // step 1
@@ -387,14 +387,77 @@ const updatecoverImage = asyncHandler(async (req , res) => {
         new ApiResponse(200 , user , "coverImage uploaded and changed succesfully")
     )
 })
+
+const channelProfile = asyncHandler(async (req , res ) => {
+    const {userName} = req.params 
+    if(!userName?.trim()){
+        throw new ApiError(400 , "Unable to fetch userName")
+    }
+    const channel = User.aggregate([
+        {
+            $match : {
+                userName : userName.toLowerCase() ,  
+            }
+        }, 
+        {
+            $lookup : {
+                from : "subcriptions" , //this subscription comes form Subscription with small s and plural as we had studied earlier 
+                localField : "_id" , 
+                foreignField : "channel", 
+                as : "subscribers"
+            }            
+        }, 
+        {
+            $lookup : {
+                from : "subscriptions", 
+                localField : "_id", 
+                foreignField : "subscriber" , 
+                as : "subscribedTo"
+            }
+        }, 
+        {
+            $addFields : {
+                subscriberCount : {
+                    $size : "$subscribers" //we uses extra dollar sign here bcz subscriber is a field and we always use $ sign before fields t
+                } , 
+                channelsSubscribedToCount : {
+                    $size : "$subscribedTo"
+                }, 
+                isSubscribed : {
+                    $cond : {
+                        if : {$in : [req.user?._id , "$subscribers.subscriber"]}, 
+                        then : true , 
+                        else : false
+                    }
+                }
+            }
+        }, 
+        {
+            $project: {
+                fullName: 1,
+                userName: 1,
+                subscriberCount: 1,
+                channelsSubscribedToCount: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1
+
+            }
+        }
+    ])
+    console.log(channel)
+})
 export { 
     registerUser,
     loginUser, 
     logOutUser, 
     refreshAccessToken, 
     changePassword, 
+    getCurrentUser,
     updateAccountDetails, 
     updateAvatar, 
     deleteAndUpdataAvatar, 
-    updatecoverImage
+    updatecoverImage, 
+    channelProfile
 };
